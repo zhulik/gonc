@@ -28,7 +28,7 @@ type message struct {
 }
 
 type EventBus struct {
-	inputChannel chan message
+	queue chan message
 
 	subscriptions subscriptionStorage
 	active        int32
@@ -38,7 +38,7 @@ type EventBus struct {
 
 func New() EventBus {
 	bus := EventBus{
-		inputChannel:  make(chan message),
+		queue:         make(chan message),
 		stopped:       notification.New(),
 		subscriptions: newSubscriptionStorage(),
 		active:        1,
@@ -70,13 +70,13 @@ func (b *EventBus) Topics() []string {
 
 	done := make(chan []string)
 	msg := message{messageType: messageTypeTopics, done: done} // nolint: exhaustruct
-	b.inputChannel <- msg
+	b.queue <- msg
 
 	return <-done
 }
 
 func (b EventBus) Publish(topic string, event any) {
-	b.inputChannel <- message{messageType: messageTypeEvent, topic: topic, event: event} // nolint: exhaustruct
+	b.queue <- message{messageType: messageTypeEvent, topic: topic, event: event} // nolint: exhaustruct
 }
 
 func (b *EventBus) Stop() {
@@ -84,7 +84,7 @@ func (b *EventBus) Stop() {
 		return
 	}
 	atomic.StoreInt32(&(b.active), 0)
-	close(b.inputChannel)
+	close(b.queue)
 }
 
 func (b EventBus) Wait() {
@@ -105,7 +105,7 @@ func (b EventBus) Subscribe(topic string, handler eventHandler) *Subscription {
 
 	done := make(chan []string)
 	msg := message{messageType: messageTypeSubscription, subscription: s, done: done} // nolint: exhaustruct
-	b.inputChannel <- msg
+	b.queue <- msg
 	<-done
 
 	return s
@@ -114,12 +114,12 @@ func (b EventBus) Subscribe(topic string, handler eventHandler) *Subscription {
 func (b EventBus) Unsubscribe(s *Subscription) {
 	done := make(chan []string)
 	msg := message{messageType: messageTypeUnsubscription, subscription: s, done: done} // nolint: exhaustruct
-	b.inputChannel <- msg
+	b.queue <- msg
 	<-done
 }
 
 func (b EventBus) listen() {
-	for msg := range b.inputChannel {
+	for msg := range b.queue {
 		switch msg.messageType {
 		case messageTypeEvent:
 			b.broadcastEvent(msg)

@@ -8,12 +8,12 @@ type Notification interface {
 }
 
 type notifikation struct {
-	wg *sync.WaitGroup
+	wg sync.WaitGroup
 }
 
 func New() Notification {
 	n := notifikation{
-		wg: &sync.WaitGroup{},
+		wg: sync.WaitGroup{},
 	}
 	n.wg.Add(1)
 	return &n
