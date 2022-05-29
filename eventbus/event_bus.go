@@ -1,6 +1,7 @@
 package eventbus
 
 import (
+	"sync"
 	"sync/atomic"
 )
 
@@ -31,16 +32,17 @@ type EventBus struct {
 	subscriptions subscriptionStorage
 	active        int32
 
-	stopped chan bool
+	stopped *sync.WaitGroup
 }
 
 func New() EventBus {
 	bus := EventBus{
 		inputChannel:  make(chan message),
-		stopped:       make(chan bool, 1),
+		stopped:       &sync.WaitGroup{},
 		subscriptions: newSubscriptionStorage(),
 		active:        1,
 	}
+	bus.stopped.Add(1)
 	go bus.listen()
 
 	return bus
@@ -80,7 +82,15 @@ func (b EventBus) Publish(topic string, event any) {
 func (b *EventBus) Stop() {
 	atomic.StoreInt32(&(b.active), 0)
 	close(b.inputChannel)
-	<-b.stopped
+}
+
+func (b EventBus) Wait() {
+	b.stopped.Wait()
+}
+
+func (b *EventBus) StopWait() {
+	b.Stop()
+	b.Wait()
 }
 
 func (b *EventBus) IsActive() bool {
@@ -120,7 +130,7 @@ func (b EventBus) listen() {
 			msg.done <- b.subscriptions.topics()
 		}
 	}
-	b.stopped <- true
+	b.stopped.Done()
 }
 
 func (b EventBus) broadcastEvent(msg message) {

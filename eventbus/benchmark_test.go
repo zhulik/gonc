@@ -35,7 +35,7 @@ func runBenchmark(topics []string) int64 {
 		bus.Publish(topics[index], 0)
 	}
 
-	bus.Stop()
+	bus.StopWait()
 
 	return total
 }

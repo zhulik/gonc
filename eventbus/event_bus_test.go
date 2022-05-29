@@ -15,7 +15,7 @@ func TestNew(t *testing.T) {
 
 	assert.True(t, bus.IsActive())
 	assert.Empty(t, bus.Topics())
-	bus.Stop()
+	bus.StopWait()
 	assert.False(t, bus.IsActive())
 }
 
@@ -29,7 +29,7 @@ func TestEventDelivery(t *testing.T) {
 		bus.Publish("topic3", "message")
 		bus.Publish("topic4", "message")
 		assert.Empty(t, bus.Topics())
-		bus.Stop()
+		bus.StopWait()
 		assert.False(t, bus.IsActive())
 	})
 
@@ -52,7 +52,7 @@ func TestEventDelivery(t *testing.T) {
 
 		assert.Empty(t, bus.Topics())
 
-		bus.Stop()
+		bus.StopWait()
 		assert.False(t, bus.IsActive())
 	})
 
@@ -93,7 +93,7 @@ func TestEventDelivery(t *testing.T) {
 		bus.Publish("topic1", "topic1")
 		bus.Publish("topic2", "topic2")
 
-		bus.Stop()
+		bus.StopWait()
 
 		assert.Equal(t, int32(2), topic1Count)
 		assert.Equal(t, int32(2), topic2Count)
@@ -149,7 +149,7 @@ func TestConcurrency(t *testing.T) {
 	}
 	wg.Wait()
 
-	bus.Stop()
+	bus.StopWait()
 
 	assert.Empty(t, bus.Topics())
 
