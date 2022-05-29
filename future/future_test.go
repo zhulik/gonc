@@ -9,10 +9,10 @@ import (
 )
 
 func TestFuture(t *testing.T) {
-	futures := make([]future.Future[int], 1000)
+	futures := make([]future.Future[bool], 1000)
 	for i := 0; i < 1000; i++ {
-		futures[i] = future.F(func() (int, error) {
-			return 1, nil
+		futures[i] = future.Go(func() {
+
 		})
 		futures[i].IsResolved()
 	}
@@ -21,8 +21,7 @@ func TestFuture(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		for j := 0; j < 10; j++ {
 			go func(n int) {
-				r, _ := futures[n].Wait()
-				assert.Equal(t, 1, r)
+				futures[n].Wait()
 				wg.Done()
 			}(i)
 		}

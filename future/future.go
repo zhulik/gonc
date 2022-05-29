@@ -22,9 +22,21 @@ type future[T any] struct {
 	result unsafe.Pointer
 }
 
-type handler[T any] func() (T, error)
+type handler func()
+type handlerR[T any] func() (T, error)
 
-func New[T any]() Future[T] {
+type F Future[bool]
+type FR[T any] Future[T]
+
+func New() F {
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	return &future[bool]{
+		done: &wg,
+	}
+}
+
+func NewR[T any]() FR[T] {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	return &future[T]{
@@ -32,8 +44,17 @@ func New[T any]() Future[T] {
 	}
 }
 
-func F[T any](h handler[T]) Future[T] {
-	f := New[T]()
+func Go(h handler) F {
+	f := New()
+	go func() {
+		h()
+		f.Resolve(true, nil)
+	}()
+	return f
+}
+
+func GoR[T any](h handlerR[T]) FR[T] {
+	f := NewR[T]()
 	go func() {
 		f.Resolve(h())
 	}()
