@@ -1,8 +1,7 @@
 package eventbus
 
 import (
-	"sync/atomic"
-
+	"github.com/zhulik/gonc/flag"
 	"github.com/zhulik/gonc/notification"
 )
 
@@ -31,7 +30,7 @@ type EventBus struct {
 	queue chan message
 
 	subscriptions subscriptionStorage
-	active        int32
+	stoppedFlag   flag.Flag
 
 	stopped notification.Notification
 }
@@ -41,7 +40,7 @@ func New() EventBus {
 		queue:         make(chan message),
 		stopped:       notification.New(),
 		subscriptions: newSubscriptionStorage(),
-		active:        1,
+		stoppedFlag:   flag.New(),
 	}
 	go bus.listen()
 
@@ -83,7 +82,7 @@ func (b *EventBus) Stop() {
 	if !b.IsActive() {
 		return
 	}
-	atomic.StoreInt32(&(b.active), 0)
+	b.stoppedFlag.Raise()
 	close(b.queue)
 }
 
@@ -97,7 +96,7 @@ func (b *EventBus) StopWait() {
 }
 
 func (b *EventBus) IsActive() bool {
-	return atomic.LoadInt32(&(b.active)) == 1
+	return !b.stoppedFlag.IsRaised()
 }
 
 func (b EventBus) Subscribe(topic string, handler eventHandler) *Subscription {

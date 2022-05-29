@@ -2,8 +2,8 @@ package workerpool
 
 import (
 	"sync"
-	"sync/atomic"
 
+	"github.com/zhulik/gonc/flag"
 	"github.com/zhulik/gonc/future"
 	"github.com/zhulik/gonc/notification"
 )
@@ -16,18 +16,18 @@ type message struct {
 }
 
 type WorkerPool struct {
-	queue   chan message
-	stopped notification.Notification
-	size    int
-	active  int32
+	queue       chan message
+	stopped     notification.Notification
+	size        int
+	stoppedFlag flag.Flag
 }
 
 func New(size int, queueSize int) WorkerPool {
 	pool := WorkerPool{
-		queue:   make(chan message, queueSize),
-		stopped: notification.New(),
-		size:    size,
-		active:  1,
+		queue:       make(chan message, queueSize),
+		stopped:     notification.New(),
+		size:        size,
+		stoppedFlag: flag.New(),
 	}
 	go pool.run()
 	return pool
@@ -45,7 +45,7 @@ func (p *WorkerPool) Stop() {
 	if !p.IsActive() {
 		return
 	}
-	atomic.StoreInt32(&(p.active), 0)
+	p.stoppedFlag.Raise()
 	close(p.queue)
 }
 
@@ -59,7 +59,7 @@ func (p *WorkerPool) StopWait() {
 }
 
 func (p *WorkerPool) IsActive() bool {
-	return atomic.LoadInt32(&(p.active)) == 1
+	return !flag.New().IsRaised()
 }
 
 func (p *WorkerPool) run() {
