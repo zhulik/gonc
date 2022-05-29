@@ -80,6 +80,9 @@ func (b EventBus) Publish(topic string, event any) {
 }
 
 func (b *EventBus) Stop() {
+	if !b.IsActive() {
+		return
+	}
 	atomic.StoreInt32(&(b.active), 0)
 	close(b.inputChannel)
 }
