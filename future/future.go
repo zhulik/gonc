@@ -1,9 +1,10 @@
 package future
 
 import (
-	"sync"
 	"sync/atomic"
 	"unsafe"
+
+	"github.com/zhulik/gonc/notification"
 )
 
 type Future[T any] interface {
@@ -18,7 +19,7 @@ type result[T any] struct {
 }
 
 type future[T any] struct {
-	done   *sync.WaitGroup
+	done   notification.Notification
 	result unsafe.Pointer
 }
 
@@ -29,18 +30,14 @@ type F Future[bool]
 type FR[T any] Future[T]
 
 func New() F {
-	wg := sync.WaitGroup{}
-	wg.Add(1)
 	return &future[bool]{
-		done: &wg,
+		done: notification.New(),
 	}
 }
 
 func NewR[T any]() FR[T] {
-	wg := sync.WaitGroup{}
-	wg.Add(1)
 	return &future[T]{
-		done: &wg,
+		done: notification.New(),
 	}
 }
 
@@ -67,7 +64,7 @@ func (f *future[T]) Resolve(res T, err error) {
 	}
 	r := result[T]{result: res, err: err}
 	atomic.StorePointer(&f.result, unsafe.Pointer(&r))
-	f.done.Done()
+	f.done.Signal()
 }
 
 func (f *future[T]) Wait() (T, error) {

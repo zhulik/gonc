@@ -1,8 +1,9 @@
 package eventbus
 
 import (
-	"sync"
 	"sync/atomic"
+
+	"github.com/zhulik/gonc/notification"
 )
 
 type eventHandler func(event any) bool
@@ -32,17 +33,16 @@ type EventBus struct {
 	subscriptions subscriptionStorage
 	active        int32
 
-	stopped *sync.WaitGroup
+	stopped notification.Notification
 }
 
 func New() EventBus {
 	bus := EventBus{
 		inputChannel:  make(chan message),
-		stopped:       &sync.WaitGroup{},
+		stopped:       notification.New(),
 		subscriptions: newSubscriptionStorage(),
 		active:        1,
 	}
-	bus.stopped.Add(1)
 	go bus.listen()
 
 	return bus
@@ -133,7 +133,7 @@ func (b EventBus) listen() {
 			msg.done <- b.subscriptions.topics()
 		}
 	}
-	b.stopped.Done()
+	b.stopped.Signal()
 }
 
 func (b EventBus) broadcastEvent(msg message) {

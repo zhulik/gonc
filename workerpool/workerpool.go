@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/zhulik/gonc/future"
+	"github.com/zhulik/gonc/notification"
 )
 
 type Task func()
@@ -16,7 +17,7 @@ type message struct {
 
 type WorkerPool struct {
 	queue   chan message
-	stopped *sync.WaitGroup
+	stopped notification.Notification
 	size    int
 	active  int32
 }
@@ -24,11 +25,10 @@ type WorkerPool struct {
 func New(size int, queueSize int) WorkerPool {
 	pool := WorkerPool{
 		queue:   make(chan message, queueSize),
-		stopped: &sync.WaitGroup{},
+		stopped: notification.New(),
 		size:    size,
 		active:  1,
 	}
-	pool.stopped.Add(1)
 	go pool.run()
 	return pool
 }
@@ -69,7 +69,7 @@ func (p *WorkerPool) run() {
 		go worker(i, p.queue, &wg)
 	}
 	wg.Wait()
-	p.stopped.Done()
+	p.stopped.Signal()
 }
 
 func worker(id int, queue <-chan message, wg *sync.WaitGroup) {
